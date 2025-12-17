@@ -2,6 +2,27 @@
 
 **Next.js powered keyword analysis tool. Find low-competition, high-value keywords instantly.**
 
+## 🚀 快速部署 (5分钟)
+
+### 1. 创建GitHub仓库
+访问 https://github.com/new，创建仓库 `blue-ocean-keywords` (Public)
+
+### 2. 推送代码
+```bash
+cd /Users/darling/downloads/xiaomi
+git remote add origin https://github.com/YOUR_USERNAME/blue-ocean-keywords.git
+git push -u origin main
+```
+
+### 3. Cloudflare Pages部署
+- 访问 https://dash.cloudflare.com → Workers & Pages
+- Connect to Git → 选择仓库
+- 构建命令: `npm run build`
+- 输出目录: `.next`
+- 点击部署！
+
+**完成！** 获得 `your-project.pages.dev`
+
 ## 🎯 Features
 
 - **Intelligent Analysis**: Analyzes search volume, competition, and trends
