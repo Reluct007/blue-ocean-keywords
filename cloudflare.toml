@@ -1,7 +1,7 @@
 # Cloudflare Pages Configuration - Updated for Next.js 14
 [build]
 command = "npm run build"
-output_dir = ".next"
+output_dir = "out"
 
 [build.environment]
 NODE_VERSION = "20"

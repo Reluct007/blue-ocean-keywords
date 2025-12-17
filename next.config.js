@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 不指定output - 让Cloudflare Pages原生支持
+  output: 'export',
   // 不指定output: undefined - 就使用默认服务器模式
   images: {
     unoptimized: true,
