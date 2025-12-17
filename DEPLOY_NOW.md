@@ -56,7 +56,7 @@ git push -u origin main
 3. **配置构建**（**⚠️ 重要**）
    ```
    构建命令:       npm run build
-   构建输出目录:   .next
+   构建输出目录:   out
    根目录:        /
    ```
 

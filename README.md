@@ -18,7 +18,7 @@ git push -u origin main
 - 访问 https://dash.cloudflare.com → Workers & Pages
 - Connect to Git → 选择仓库
 - 构建命令: `npm run build`
-- 输出目录: `.next`
+- 输出目录: `out`
 - 点击部署！
 
 **完成！** 获得 `your-project.pages.dev`
