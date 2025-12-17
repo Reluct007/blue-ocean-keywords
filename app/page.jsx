@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 
-// 内联分析器 - 避免模块导入问题
+// 内联分析器
 class BlueOceanAnalyzer {
-  constructor() {
-    this.results = [];
-  }
+  constructor() { this.results = []; }
 
   generateData(seed) {
     const suffixes = [
@@ -17,28 +15,14 @@ class BlueOceanAnalyzer {
       { txt: " techniques", mod: 1.0 },
       { txt: " mistakes", mod: 0.7 },
     ];
-
     const users = ["beginner", "home", "quick", "simple"];
     const platforms = ["YouTube", "Instagram", "TikTok", "Podcast"];
-
     const data = [];
 
-    // Core variants
-    suffixes.forEach(s => {
-      data.push(this.createItem(`${seed}${s.txt}`, s.mod, "Variant"));
-    });
+    suffixes.forEach(s => data.push(this.createItem(`${seed}${s.txt}`, s.mod, "Variant")));
+    users.forEach(u => data.push(this.createItem(`${u} ${seed}`, 0.8 + Math.random() * 0.6, "Scenario")));
+    platforms.forEach(p => data.push(this.createItem(`${seed} ${p}`, 0.9 + Math.random() * 0.5, "Platform")));
 
-    // User scenarios
-    users.forEach(u => {
-      data.push(this.createItem(`${u} ${seed}`, 0.8 + Math.random() * 0.6, "Scenario"));
-    });
-
-    // Platforms
-    platforms.forEach(p => {
-      data.push(this.createItem(`${seed} ${p}`, 0.9 + Math.random() * 0.5, "Platform"));
-    });
-
-    // Long-tail combos
     for (let i = 0; i < 4; i++) {
       const u = users[Math.floor(Math.random() * users.length)];
       const s = suffixes[Math.floor(Math.random() * suffixes.length)];
@@ -53,35 +37,13 @@ class BlueOceanAnalyzer {
     const comp = Math.floor(Math.random() * 10000 * mod) + 50;
     const cpc = (Math.random() * 5 * mod + 0.1).toFixed(2);
     const trend = Math.random() > 0.6 ? Math.floor(Math.random() * 50 + 10) : Math.floor(Math.random() * 20 - 10);
+    const score = Math.min(100, Math.max(0, Math.round(
+      Math.min(100, (vol / 5000) * 100) * 0.4 +
+      Math.max(0, 100 - (comp / 100)) * 0.4 +
+      (trend > 0 ? Math.min(40, trend / 2) : 0) * 0.2
+    )));
 
-    // Blue ocean scoring
-    const volumeScore = Math.min(100, (vol / 5000) * 100);
-    const competitionScore = Math.max(0, 100 - (comp / 100));
-    const trendScore = trend > 0 ? Math.min(40, trend / 2) : 0;
-
-    const rawScore = volumeScore * 0.4 + competitionScore * 0.4 + trendScore * 0.2;
-    const score = Math.min(100, Math.max(0, Math.round(rawScore)));
-
-    let status = "saturated";
-    if (score >= 70 && comp < 2000) status = "blueOcean";
-    else if (score >= 50) status = "potential";
-
-    const tags = this.getTags(name, category);
-
-    return {
-      name,
-      volume: vol,
-      competition: comp,
-      cpc,
-      trend,
-      score,
-      status,
-      category,
-      tags,
-    };
-  }
-
-  getTags(name, category) {
+    const status = score >= 70 && comp < 2000 ? "blueOcean" : score >= 50 ? "potential" : "saturated";
     const tags = [];
     if (name.includes("guide")) tags.push("Guide");
     if (name.includes("tips")) tags.push("Tips");
@@ -89,11 +51,12 @@ class BlueOceanAnalyzer {
     if (name.includes("home")) tags.push("Home");
     if (name.includes("YouTube") || name.includes("Instagram") || name.includes("TikTok")) tags.push("Social");
     if (category === "LongTail") tags.push("Long-tail");
-    return tags.length ? tags : ["General"];
+
+    return { name, volume: vol, competition: comp, cpc, trend, score, status, category, tags: tags.length ? tags : ["General"] };
   }
 
   async analyze(seed) {
-    await new Promise(resolve => setTimeout(resolve, 600)); // Simulate calculate
+    await new Promise(resolve => setTimeout(resolve, 600));
     const data = this.generateData(seed);
     this.results = data;
     return data;
@@ -126,15 +89,9 @@ class BlueOceanAnalyzer {
   }
 
   advice(item) {
-    let advice = "";
-    if (item.status === "blueOcean") {
-      advice = "✅ Create content immediately! This is a golden opportunity.\n✅ Focus on depth and value\n✅ Target this keyword across all platforms";
-    } else if (item.status === "potential") {
-      advice = "⚠️  Moderate competition, proceed carefully\n⚠️  Need better content quality or backlinks\n⚠️  Consider long-tail variations";
-    } else {
-      advice = "❌ Too saturated, avoid directly\n🔄 Try more specific variations\n🔄 Target sub-niches instead";
-    }
-    return advice;
+    if (item.status === "blueOcean") return "✅ Create content immediately! This is a golden opportunity.\n✅ Target this keyword across all platforms";
+    if (item.status === "potential") return "⚠️  Moderate competition, proceed carefully\n⚠️  Consider long-tail variations";
+    return "❌ Too saturated, avoid directly\n🔄 Target sub-niches instead";
   }
 }
 
@@ -149,28 +106,18 @@ export default function Home() {
   const [showResults, setShowResults] = useState(false);
 
   const analyzerRef = useRef(null);
-
-  useEffect(() => {
-    analyzerRef.current = new BlueOceanAnalyzer();
-  }, []);
+  useEffect(() => { analyzerRef.current = new BlueOceanAnalyzer(); }, []);
 
   const handleAnalyze = async () => {
-    if (!keyword.trim()) {
-      alert("Please enter a seed keyword");
-      return;
-    }
-
-    setLoading(true);
-    setShowResults(true);
+    if (!keyword.trim()) { alert("Please enter a seed keyword"); return; }
+    setLoading(true); setShowResults(true);
     const results = await analyzerRef.current.analyze(keyword.trim());
-    setResults(results);
-    setLoading(false);
+    setResults(results); setLoading(false);
   };
 
   const filtered = useMemo(() => {
     if (!analyzerRef.current || !results.length) return [];
-    const filtered = analyzerRef.current.filter(filterType);
-    return analyzerRef.current.sort(sortBy, filtered);
+    return analyzerRef.current.sort(sortBy, analyzerRef.current.filter(filterType));
   }, [results, filterType, sortBy]);
 
   const stats = useMemo(() => {
@@ -187,53 +134,26 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 py-6">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-xl text-center mb-3">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-1">
-            🌊 Blue Ocean Keywords
-          </h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-1">🌊 Blue Ocean Keywords</h1>
           <p className="text-sm text-gray-600">Find low-competition, high-value keywords</p>
         </div>
 
-        {/* Search */}
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-xl mb-3 border-l-4 border-purple-500">
           <div className="flex gap-2 mb-2 flex-wrap">
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-              placeholder="Seed keyword (e.g., fitness, diet, english)"
-              className="flex-1 min-w-[200px] px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
-              disabled={loading}
-            />
-            <button
-              onClick={handleAnalyze}
-              disabled={loading}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg disabled:opacity-50 hover:opacity-90"
-            >
-              {loading ? "∞" : "Analyze"}
-            </button>
+            <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAnalyze()} placeholder="Seed keyword (e.g., fitness, diet, english)" className="flex-1 min-w-[200px] px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500 text-sm" disabled={loading} />
+            <button onClick={handleAnalyze} disabled={loading} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg disabled:opacity-50 hover:opacity-90">{loading ? "∞" : "Analyze"}</button>
           </div>
-
           <div className="flex gap-2 items-center flex-wrap text-sm">
             <span className="text-gray-600 font-semibold">Try:</span>
             {["Home Workout", "Meal Prep", "Business English"].map((ex) => (
-              <button
-                key={ex}
-                onClick={() => setKeyword(ex)}
-                className="px-2 py-1 bg-gray-100 hover:bg-purple-100 rounded border border-gray-200"
-              >
-                {ex}
-              </button>
+              <button key={ex} onClick={() => setKeyword(ex)} className="px-2 py-1 bg-gray-100 hover:bg-purple-100 rounded border border-gray-200">{ex}</button>
             ))}
           </div>
         </div>
 
-        {/* Results */}
         {showResults && (
           <>
-            {/* Stats */}
             {stats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
                 {[
@@ -250,44 +170,30 @@ export default function Home() {
               </div>
             )}
 
-            {/* Filters */}
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-3 shadow-xl mb-3">
               <div className="flex gap-2 flex-wrap">
                 <div className="flex-1 flex gap-1 items-center">
                   <span className="text-sm font-semibold text-gray-700">Filter:</span>
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm"
-                  >
+                  <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm">
                     <option value="all">All</option>
                     <option value="blueOcean">Blue Ocean</option>
                     <option value="potential">High Potential</option>
                     <option value="saturated">Saturated</option>
                   </select>
                 </div>
-
                 <div className="flex-1 flex gap-1 items-center">
                   <span className="text-sm font-semibold text-gray-700">Sort:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm"
-                  >
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm">
                     <option value="potential">Potential</option>
                     <option value="competition">Competition</option>
                     <option value="volume">Volume</option>
                     <option value="name">A-Z</option>
                   </select>
                 </div>
-
-                <div className="text-sm text-gray-600 pt-2">
-                  {loading ? "∞" : `${filtered.length} results`}
-                </div>
+                <div className="text-sm text-gray-600 pt-2">{loading ? "∞" : `${filtered.length} results`}</div>
               </div>
             </div>
 
-            {/* Loading */}
             {loading && (
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 text-center">
                 <div className="text-2xl animate-pulse mb-1">🌊 Scanning</div>
@@ -295,43 +201,18 @@ export default function Home() {
               </div>
             )}
 
-            {/* Keyword List */}
             {!loading && filtered.length > 0 && (
               <div className="space-y-2 mb-3">
                 {filtered.map((item, idx) => {
-                  const statusColor = {
-                    blueOcean: "border-l-4 border-green-500",
-                    potential: "border-l-4 border-yellow-500",
-                    saturated: "border-l-4 border-red-500",
-                  }[item.status];
-
-                  const badgeColor = {
-                    blueOcean: "bg-green-500",
-                    potential: "bg-yellow-500",
-                    saturated: "bg-red-500",
-                  }[item.status];
-
-                  const badgeText = {
-                    blueOcean: "OCEAN",
-                    potential: "POTENTIAL",
-                    saturated: "SATURATED",
-                  }[item.status];
-
+                  const statusColor = { blueOcean: "border-l-4 border-green-500", potential: "border-l-4 border-yellow-500", saturated: "border-l-4 border-red-500" }[item.status];
+                  const badgeColor = { blueOcean: "bg-green-500", potential: "bg-yellow-500", saturated: "bg-red-500" }[item.status];
+                  const badgeText = { blueOcean: "OCEAN", potential: "POTENTIAL", saturated: "SATURATED" }[item.status];
                   return (
-                    <div
-                      key={idx}
-                      className={`bg-white/95 backdrop-blur-sm rounded-xl p-3 cursor-pointer hover:translate-x-1 transition-all ${statusColor}
-                                 animate-in slide-in-from-left-4 duration-300`}
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                      onClick={() => showDetail(item)}
-                    >
+                    <div key={idx} className={`bg-white/95 backdrop-blur-sm rounded-xl p-3 cursor-pointer hover:translate-x-1 transition-all ${statusColor} animate-in slide-in-from-left-4 duration-300`} style={{ animationDelay: `${idx * 50}ms` }} onClick={() => showDetail(item)}>
                       <div className="flex justify-between items-center mb-2">
                         <div className="font-bold text-gray-800 text-[15px]">{item.name}</div>
-                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${badgeColor}`}>
-                          {badgeText}
-                        </div>
+                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${badgeColor}`}>{badgeText}</div>
                       </div>
-
                       <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-gray-600 mb-1">
                         <span>🔍 {formatNumber(item.volume)}</span>
                         <span>⚔️ {formatNumber(item.competition)}</span>
@@ -339,16 +220,11 @@ export default function Home() {
                         <span>📈 {item.trend > 0 ? '+' : ''}{item.trend}</span>
                         <span>📊 {item.score}</span>
                       </div>
-
                       <div className="flex flex-wrap gap-1">
                         {item.tags.map((tag, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-semibold text-gray-700">
-                            {tag}
-                          </span>
+                          <span key={i} className="px-2 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-semibold text-gray-700">{tag}</span>
                         ))}
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded text-[10px] font-semibold">
-                          {item.category}
-                        </span>
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded text-[10px] font-semibold">{item.category}</span>
                       </div>
                     </div>
                   );
@@ -356,75 +232,53 @@ export default function Home() {
               </div>
             )}
 
-            {/* Chart */}
             {!loading && filtered.length > 0 && (
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-3 shadow-xl mb-6">
                 <div className="text-sm font-bold text-gray-800 mb-2">📈 Visualization</div>
-                <canvas
-                  ref={(canvas) => {
-                    if (!canvas || !filtered.length) return;
-                    const ctx = canvas.getContext('2d');
-                    const width = canvas.width = canvas.offsetWidth;
-                    const height = canvas.height = 220;
-
-                    ctx.clearRect(0, 0, width, height);
-
-                    const data = filtered.slice(0, 10);
-                    const barW = (width - 40) / data.length;
-                    const maxComp = Math.max(...data.map(d => d.competition));
-                    const maxScore = Math.max(...data.map(d => parseFloat(d.score)));
-
-                    // Grid
-                    ctx.strokeStyle = "#f3f4f6";
-                    for (let i = 0; i <= 4; i++) {
-                      const y = 35 + (height - 60) * (i / 4);
-                      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(width - 10, y); ctx.stroke();
+                <canvas ref={(canvas) => {
+                  if (!canvas || !filtered.length) return;
+                  const ctx = canvas.getContext('2d');
+                  const width = canvas.width = canvas.offsetWidth;
+                  const height = canvas.height = 220;
+                  ctx.clearRect(0, 0, width, height);
+                  const data = filtered.slice(0, 10);
+                  const barW = (width - 40) / data.length;
+                  const maxComp = Math.max(...data.map(d => d.competition));
+                  const maxScore = Math.max(...data.map(d => parseFloat(d.score)));
+                  ctx.strokeStyle = "#f3f4f6";
+                  for (let i = 0; i <= 4; i++) {
+                    const y = 35 + (height - 60) * (i / 4);
+                    ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(width - 10, y); ctx.stroke();
+                  }
+                  data.forEach((d, i) => {
+                    const x = 40 + i * barW;
+                    const hc = (d.competition / maxComp) * (height - 60);
+                    ctx.fillStyle = "#ef4444";
+                    ctx.fillRect(x, height - 25 - hc, barW * 0.3, hc);
+                    const hp = (parseFloat(d.score) / maxScore) * (height - 60);
+                    ctx.fillStyle = d.status === 'blueOcean' ? '#10b981' : d.status === 'potential' ? '#f59e0b' : '#ef4444';
+                    ctx.fillRect(x + barW * 0.35, height - 25 - hp, barW * 0.3, hp);
+                    if (i % 2 === 0) {
+                      ctx.fillStyle = "#6b7280";
+                      ctx.font = "10px sans-serif";
+                      const label = d.name.length > 5 ? d.name.substring(0, 4) + ".." : d.name;
+                      ctx.fillText(label, x, height - 10);
                     }
-
-                    // Bars
-                    data.forEach((d, i) => {
-                      const x = 40 + i * barW;
-
-                      // Competition (red)
-                      const hc = (d.competition / maxComp) * (height - 60);
-                      ctx.fillStyle = "#ef4444";
-                      ctx.fillRect(x, height - 25 - hc, barW * 0.3, hc);
-
-                      // Potential (color-coded)
-                      const hp = (parseFloat(d.score) / maxScore) * (height - 60);
-                      ctx.fillStyle = d.status === 'blueOcean' ? '#10b981' : d.status === 'potential' ? '#f59e0b' : '#ef4444';
-                      ctx.fillRect(x + barW * 0.35, height - 25 - hp, barW * 0.3, hp);
-
-                      // Labels
-                      if (i % 2 === 0) {
-                        ctx.fillStyle = "#6b7280";
-                        ctx.font = "10px sans-serif";
-                        const label = d.name.length > 5 ? d.name.substring(0, 4) + ".." : d.name;
-                        ctx.fillText(label, x, height - 10);
-                      }
-                    });
-
-                    // Legend
-                    ctx.fillStyle = "#ef4444"; ctx.fillRect(width - 70, 8, 10, 10);
-                    ctx.fillStyle = "#333"; ctx.font = "10px sans-serif"; ctx.fillText("COMP", width - 56, 17);
-                    ctx.fillStyle = "#10b981"; ctx.fillRect(width - 70, 23, 10, 10);
-                    ctx.fillText("SCORE", width - 56, 32);
-                  }}
-                  className="w-full !h-[220px]"
-                />
+                  });
+                  ctx.fillStyle = "#ef4444"; ctx.fillRect(width - 70, 8, 10, 10);
+                  ctx.fillStyle = "#333"; ctx.font = "10px sans-serif"; ctx.fillText("COMP", width - 56, 17);
+                  ctx.fillStyle = "#10b981"; ctx.fillRect(width - 70, 23, 10, 10);
+                  ctx.fillText("SCORE", width - 56, 32);
+                }} className="w-full !h-[220px]" />
               </div>
             )}
 
-            {/* Empty */}
             {!loading && filtered.length === 0 && (
-              <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 text-center text-gray-500">
-                No results match your filter
-              </div>
+              <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 text-center text-gray-500">No results match your filter</div>
             )}
           </>
         )}
 
-        {/* Footer */}
         <div className="text-center text-white/80 text-xs mt-4 pb-2">
           <p>Blue Ocean Keywords © 2024 | Next.js + Cloudflare Pages</p>
         </div>

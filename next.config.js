@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 标准server渲染，Cloudflare Pages支持完美
-  output: undefined,
+  // 使用静态导出 - 最兼容Cloudflare Pages的方案
+  output: 'export',
   images: {
     unoptimized: true,
   },
-  // 性能优化
+  // 完全禁用控制台清理以确保调错
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: false,
   },
   // 安全头部
   async headers() {
