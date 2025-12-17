@@ -5,9 +5,9 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
-
-# 允许手动触发
-workflow_dispatch:
+  
+  # 允许手动触发
+  workflow_dispatch:
 
 # 设置权限
 permissions:
