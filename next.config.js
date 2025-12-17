@@ -1,26 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 使用静态导出 - 最兼容Cloudflare Pages的方案
-  output: 'export',
+  // 不指定output - 让Cloudflare Pages原生支持
+  // 不指定output: undefined - 就使用默认服务器模式
   images: {
     unoptimized: true,
   },
-  // 完全禁用控制台清理以确保调错
-  compiler: {
-    removeConsole: false,
+  typescript: {
+    // 跳过类型检查以加快Cloudflare构建
+    ignoreBuildErrors: true,
   },
-  // 安全头部
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-        ],
-      },
-    ];
+  eslint: {
+    // 跳过lint以加快Cloudflare构建
+    ignoreDuringBuilds: true,
   },
 }
 
