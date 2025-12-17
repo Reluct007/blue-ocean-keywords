@@ -1,7 +1,144 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { BlueOceanAnalyzer, formatNumber } from "../lib/analyzer";
+
+// 内联分析器 - 避免模块导入问题
+class BlueOceanAnalyzer {
+  constructor() {
+    this.results = [];
+  }
+
+  generateData(seed) {
+    const suffixes = [
+      { txt: " guide", mod: 1.3 },
+      { txt: " tips", mod: 1.1 },
+      { txt: " for beginners", mod: 0.9 },
+      { txt: " at home", mod: 0.8 },
+      { txt: " techniques", mod: 1.0 },
+      { txt: " mistakes", mod: 0.7 },
+    ];
+
+    const users = ["beginner", "home", "quick", "simple"];
+    const platforms = ["YouTube", "Instagram", "TikTok", "Podcast"];
+
+    const data = [];
+
+    // Core variants
+    suffixes.forEach(s => {
+      data.push(this.createItem(`${seed}${s.txt}`, s.mod, "Variant"));
+    });
+
+    // User scenarios
+    users.forEach(u => {
+      data.push(this.createItem(`${u} ${seed}`, 0.8 + Math.random() * 0.6, "Scenario"));
+    });
+
+    // Platforms
+    platforms.forEach(p => {
+      data.push(this.createItem(`${seed} ${p}`, 0.9 + Math.random() * 0.5, "Platform"));
+    });
+
+    // Long-tail combos
+    for (let i = 0; i < 4; i++) {
+      const u = users[Math.floor(Math.random() * users.length)];
+      const s = suffixes[Math.floor(Math.random() * suffixes.length)];
+      data.push(this.createItem(`${u} ${seed}${s.txt}`, 0.7 + Math.random() * 0.7, "LongTail"));
+    }
+
+    return data.filter(item => item.name.length <= 45).slice(0, 18);
+  }
+
+  createItem(name, mod, category) {
+    const vol = Math.floor(Math.random() * 5000 * mod) + 100;
+    const comp = Math.floor(Math.random() * 10000 * mod) + 50;
+    const cpc = (Math.random() * 5 * mod + 0.1).toFixed(2);
+    const trend = Math.random() > 0.6 ? Math.floor(Math.random() * 50 + 10) : Math.floor(Math.random() * 20 - 10);
+
+    // Blue ocean scoring
+    const volumeScore = Math.min(100, (vol / 5000) * 100);
+    const competitionScore = Math.max(0, 100 - (comp / 100));
+    const trendScore = trend > 0 ? Math.min(40, trend / 2) : 0;
+
+    const rawScore = volumeScore * 0.4 + competitionScore * 0.4 + trendScore * 0.2;
+    const score = Math.min(100, Math.max(0, Math.round(rawScore)));
+
+    let status = "saturated";
+    if (score >= 70 && comp < 2000) status = "blueOcean";
+    else if (score >= 50) status = "potential";
+
+    const tags = this.getTags(name, category);
+
+    return {
+      name,
+      volume: vol,
+      competition: comp,
+      cpc,
+      trend,
+      score,
+      status,
+      category,
+      tags,
+    };
+  }
+
+  getTags(name, category) {
+    const tags = [];
+    if (name.includes("guide")) tags.push("Guide");
+    if (name.includes("tips")) tags.push("Tips");
+    if (name.includes("beginner")) tags.push("Beginner");
+    if (name.includes("home")) tags.push("Home");
+    if (name.includes("YouTube") || name.includes("Instagram") || name.includes("TikTok")) tags.push("Social");
+    if (category === "LongTail") tags.push("Long-tail");
+    return tags.length ? tags : ["General"];
+  }
+
+  async analyze(seed) {
+    await new Promise(resolve => setTimeout(resolve, 600)); // Simulate calculate
+    const data = this.generateData(seed);
+    this.results = data;
+    return data;
+  }
+
+  filter(type) {
+    if (type === "all") return this.results;
+    if (type === "blueOcean") return this.results.filter(r => r.status === "blueOcean");
+    if (type === "potential") return this.results.filter(r => r.status === "potential");
+    if (type === "saturated") return this.results.filter(r => r.status === "saturated");
+    return this.results;
+  }
+
+  sort(by, list = this.results) {
+    const items = [...list];
+    if (by === "potential") items.sort((a, b) => b.score - a.score);
+    if (by === "competition") items.sort((a, b) => a.competition - b.competition);
+    if (by === "volume") items.sort((a, b) => b.volume - a.volume);
+    if (by === "name") items.sort((a, b) => a.name.localeCompare(b.name));
+    return items;
+  }
+
+  stats(list = this.results) {
+    if (!list.length) return null;
+    const total = list.length;
+    const blueOcean = list.filter(r => r.status === "blueOcean").length;
+    const avgCompet = Math.round(list.reduce((sum, r) => sum + r.competition, 0) / total);
+    const avgScore = Math.round(list.reduce((sum, r) => sum + r.score, 0) / total);
+    return { total, blueOcean, avgCompet, avgScore };
+  }
+
+  advice(item) {
+    let advice = "";
+    if (item.status === "blueOcean") {
+      advice = "✅ Create content immediately! This is a golden opportunity.\n✅ Focus on depth and value\n✅ Target this keyword across all platforms";
+    } else if (item.status === "potential") {
+      advice = "⚠️  Moderate competition, proceed carefully\n⚠️  Need better content quality or backlinks\n⚠️  Consider long-tail variations";
+    } else {
+      advice = "❌ Too saturated, avoid directly\n🔄 Try more specific variations\n🔄 Target sub-niches instead";
+    }
+    return advice;
+  }
+}
+
+const formatNumber = (n) => n >= 1000 ? (n / 1000).toFixed(1) + "K" : n.toString();
 
 export default function Home() {
   const [keyword, setKeyword] = useState("");
