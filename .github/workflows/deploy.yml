@@ -1,0 +1,132 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# 允许手动触发
+workflow_dispatch:
+
+# 设置权限
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+jobs:
+  # 构建测试作业
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行代码检查
+        run: npm run lint
+        continue-on-error: true
+
+      - name: 构建项目
+        run: npm run build
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            out/
+            .next/
+          retention-days: 1
+
+  # 部署到 Cloudflare Pages 作业
+  deploy-preview:
+    name: Deploy Preview (PR)
+    needs: build-and-test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: out
+
+      - name: 部署到 Cloudflare Pages (Preview)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: blue-ocean-keywords
+          directory: ./out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref }}
+          # 只在 PR 时创建预览
+          wranglerVersion: '3'
+
+  # 生产环境部署
+  deploy-production:
+    name: Deploy Production
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: out
+
+      - name: 部署到 Cloudflare Pages (Production)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: blue-ocean-keywords
+          directory: ./out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
+          production: true
+          wranglerVersion: '3'
+
+      - name: 发布成功通知
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚀 部署成功: ${new Date().toLocaleString()}`,
+              body: `
+                ## 部署状态: ✅ 成功
+
+                **时间**: ${new Date().toLocaleString('zh-CN')}
+                **分支**: ${context.ref}
+                **提交**: ${context.sha.substring(0, 7)}
+
+                🌊 蓝海关键词分析工具已成功部署到 Cloudflare Pages！
+
+                访问地址: https://blue-ocean-keywords.pages.dev
+              `,
+              labels: ['deployment', 'automation']
+            });

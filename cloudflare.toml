@@ -1,0 +1,13 @@
+# Cloudflare Pages Configuration
+[build]
+command = "npm run build"
+output_dir = ".next"
+
+[build.environment]
+NODE_VERSION = "20"
+
+# Ensure static assets are cached
+[[headers]]
+for = "/_next/static/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
